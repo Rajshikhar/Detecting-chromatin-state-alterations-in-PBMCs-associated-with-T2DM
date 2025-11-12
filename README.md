@@ -40,9 +40,9 @@ Python 3.9+, `numpy`, `scipy`, `scikit-image`, `tifffile`, `pandas`, `matplotlib
 
 ## Downstream Analysis
 - Use `measure_nmco_features.py` or `nmco.utils.run_nuclear_feature_extraction` to build feature tables per nucleus.
-- Handcrafted feature notebooks ("Embedding_analysis_on_hand_crafted_features_full.ipynb") analyze class balance, patient-level stability, and classifier performance across treatments.
+- Handcrafted feature notebooks (`Embedding_analysis_on_hand_crafted_features_full.ipynb`) analyze class balance, patient-level stability, and classifier performance across treatments.
 - VAE notebooks (`Embedding_analysis_on_VAE_features_*.ipynb`) compare latent spaces, assess cluster reproducibility, and fuse embeddings with clinical metadata from `cohort_details.csv`.
-- Independent Dataset notebooks ( "Embedding_analysis_on_hand_crafted_features_Independent_Dataset.ipynb") analyse the generalizability of our framework within our dataset.
+- Independent Dataset notebooks ( `Embedding_analysis_on_hand_crafted_features_Independent_Dataset.ipynb`) analyse the generalizability of our framework within our dataset.
 
 ## Data & Metadata
 - `chrometric_feature_description.csv` documents every NMCO metric.
