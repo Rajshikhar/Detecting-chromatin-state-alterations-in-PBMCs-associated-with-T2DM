@@ -6,47 +6,50 @@ This repository contains the codes and notebooks necessary to reproduce results 
 <img width="960" height="540" alt="github_t2dm_coverpage" src="https://github.com/user-attachments/assets/daaaaf18-eec3-4e5d-90e3-bf38cec9268f" />
 
 ## Project Overview
-Chrometrics packages the tooling we use to characterize chromatin organization (NMCO) from fluorescent PBMC images collected under compressed vs. control conditions. The repository couples a reusable nuclear segmentation workflow with feature extraction utilities (`nmco/`) and analysis notebooks that compare handcrafted NMCO descriptors with latent representations learned by VAEs.
+Chrometrics delivers an end‑to‑end workflow for decoding chromatin organization in PBMC nuclei captured under compression and control conditions. The repo combines a segmentation notebook that generates label volumes and QC material, an installable NMCO feature engine (`nmco/` plus `measure_nmco_features.py`), and analysis notebooks that compare hand-crafted descriptors with latent spaces learned by VAEs across both full and independent patient cohorts.
 
-## Repository Highlights
-- `nuclear_segmentation.ipynb` – parent notebook that segments DAPI stacks, filters nuclei by 3D morphology, and produces QC-ready visualizations.
-- `nmco/` & `measure_nmco_features.py` – installable module and CLI that turn segmented nuclei + raw intensities into interpretable morphometric, intensity-distribution, and texture features.
-- `Embedding_analysis_on_*` notebooks – downstream studies that benchmark handcrafted NMCO tables against VAE embeddings on both full and independent cohorts.
-- `example_data/`, `chrometric_feature_description.csv`, and multiple `*_features*.csv/pkl` files – curated references for reproducing analyses or training classifiers.
+## Requirements
+Install everything with `pip install -r requirements.txt`:
+- `numpy>=1.18.5`, `pandas>=1.1.2`, `matplotlib>=3.3.2`
+- `opencv-python>=4.4.0.42`, `tifffile>=2020.10.1`, `scikit-image>=0.17.2`
+- `scipy>=1.5.2`, `scikit-learn>=0.23.2`, `tqdm>=4.50.0`
 
-## Nuclear Segmentation Workflow
-1. **Data ingestion** – loads all `dapi*.tiff` z-stacks from `../stacks`, keeping bookkeeping arrays for filenames and downstream QC.
-2. **Adaptive multi-Otsu thresholding** – computes `skimage.filters.threshold_multiotsu` per stack; chooses the darker/lighter bound automatically to handle bright vs. dim acquisitions.
-3. **Binary cleanup** – fills voids slice-wise (`ndi.binary_fill_holes`), denoises by a 3×3×3 median filter, labels 3D components, and removes objects outside `[800, 20000]` voxels or with elongated bounding boxes (>100 px effective length) via `utilities.filter_regions_by_volume`.
-4. **Segmentation export** – writes masked volumes back to `../stacks` as `bw_dapi*.tiff`, preserving original naming to keep raw/label pairs aligned.
-5. **Quality control** – builds a randomized categorical colormap (jet-derived) so each label renders distinctly, rescales anisotropic axes (×4 in z) for max-intensity projections, and plots raw vs. labeled overlays.
-6. **Napari review** – spins up Napari in 3D, applies consistent camera angles/zoom, and saves paired screenshots (`*_img_screenshot.png`, `*_label_screenshot.png`) in `../screenshots` for audit trails or figure panels.
+## Notebook Tour
 
-The notebook is intentionally linear so you can tweak thresholds, kernel sizes, or volume limits without touching other cells.
+### `nuclear_segmentation.ipynb`
+- Builds 3D binary masks for every `dapi*.tiff` stack via adaptive multi-Otsu thresholding, slice-wise hole filling, and 3×3×3 median filtering before volume-based cleanup (`utilities.filter_regions_by_volume`).
+- Prunes elongated/tiny detections (>100 px effective length or outside 800–20 000 voxels) to keep well-formed nuclei ready for NMCO measurements.
+- Generates max-intensity QC panels pairing raw and labeled volumes, rescales the anisotropic z-axis, and saves Napari screenshots for both images and labels to `../screenshots`.
+- Produces segmentation masks (`bw_dapi*.tiff`) that drive all downstream notebooks and CLI tools.
 
-## Running the Notebook
-### Requirements
-Python 3.9+, `numpy`, `scipy`, `scikit-image`, `tifffile`, `pandas`, `matplotlib`, `natsort`, `imageio`, and `napari`. Install via `pip install -r requirements.txt` and make sure `nmco/` is on `PYTHONPATH`.
+### `Train_VAE_get_Embedding.ipynb`
+- Loads the curated NMCO feature table (`nmco_features_filtered_with_qc_3rd_july_2024.csv`), converts nuclei into uniform 128×128 maximum-projection patches grouped by pathology, and builds PyTorch datasets with balanced pathology/patient splits (`Train_VAE_get_Embedding.ipynb:2`).
+- Defines and trains a convolutional VAE (MSE reconstruction loss, configurable epochs/checkpoints) while logging training curves and saving state dict snapshots for later reuse (`Train_VAE_get_Embedding.ipynb:6`).
+- Runs inference to capture latent vectors, reconstructions, and metadata for both train and held-out partitions; exports them as `latent_list*.pkl`, `recon_list*.pkl`, `pathalogy*.pkl`, and `patient_id*.pkl` so analysis notebooks can consume a consistent embedding space (`Train_VAE_get_Embedding.ipynb:1101`).
 
-### Quick Start
-1. Place raw DAPI stacks in `../stacks` (each named `dapi*.tiff`) and create `../screenshots`.
-2. Open `nuclear_segmentation.ipynb`, adjust `min_size`, `max_size`, and other hyperparameters near the top if needed.
-3. Run cells sequentially; segmentation masks (`bw_dapi*.tiff`) and screenshot PNGs will be written automatically.
+### `Embedding_analysis_on_hand_crafted_features_full.ipynb`
+- Loads the NMCO feature matrix (`nmco_features_filtered_jumbled_26th_aug.csv`), removes unstable descriptors, scales numeric columns, and visualizes correlations/Wasserstein distances to understand redundancy (`Embedding_analysis_on_hand_crafted_features_full.ipynb:1`).
+- Balances nuclei per patient/disease, runs Leiden clustering on the feature manifold, and maps clusters to interpretable chromatin states while keeping consensus with VAE labels.
+- Builds patient-by-cluster enrichment tables, plots disease-specific cluster usage, and uses igraph to visualize patient similarity graphs.
+- Trains Random Forest classifiers with permutation tests to benchmark pathology prediction, reports feature importances, and uses ANOVA/statannotations to tie cluster frequencies back to clinical covariates (`cohort_details.csv`).
 
-### Outputs
-- Cleaned segmentation volumes ready for NMCO feature extraction.
-- Max-projection QC figures showing raw vs. labeled nuclei.
-- Napari-generated PNGs that capture 3D context for each patient/condition.
+### `Embedding_analysis_on_hand_crafted_features_Independent_Dataset.ipynb`
+- Splits non-hypertension patients into disjoint train/test cohorts, scales features identically to the full dataset, and assigns independent nuclei to the prelearned Leiden states via k-NN (`Embedding_analysis_on_hand_crafted_features_Independent_Dataset.ipynb:1`).
+- Aggregates cluster frequencies per patient in the hold-out cohort and runs leave-one-out plus one-vs-rest Random Forest classifiers to quantify generalization.
+- Outputs per-patient prediction tables, ROC/AUC metrics for binary comparisons, and mirrors the enrichment plots used on the main cohort.
 
-## Downstream Analysis
-- Use `measure_nmco_features.py` or `nmco.utils.run_nuclear_feature_extraction` to build feature tables per nucleus.
-- Handcrafted feature notebooks (`Embedding_analysis_on_hand_crafted_features_full.ipynb`) analyze class balance, patient-level stability, and classifier performance across treatments.
-- VAE notebooks (`Embedding_analysis_on_VAE_features_*.ipynb`) compare latent spaces, assess cluster reproducibility, and fuse embeddings with clinical metadata from `cohort_details.csv`.
-- Independent Dataset notebooks ( `Embedding_analysis_on_hand_crafted_features_Independent_Dataset.ipynb`) analyse the generalizability of our framework within our dataset.
+### `Embedding_analysis_on_VAE_features_full.ipynb`
+- Starts from latent embeddings saved by the VAE notebook (`latent_list_df_lab`), balances nuclei per patient, and applies Leiden clustering plus custom palettes to label nine stable chromatin states (C1–C9) (`Embedding_analysis_on_VAE_features_full.ipynb:1`).
+- Saves cluster assignments (`vae_leiden_csv*`), plots UMAP/2D projections with patient and disease overlays, and constructs cluster–patient bipartite graphs to highlight morphometric programs shared across subjects.
+- Builds enrichment matrices, runs multi-class and binary classifiers with permutation-based nulls, and summarizes confusion matrices plus AUROC to show that VAE embeddings retain diagnostic signal while linking metadata from `cohort_details.csv`.
 
-## Data & Metadata
-- `chrometric_feature_description.csv` documents every NMCO metric.
-- `nmco_features_df*.csv` and `latent_list_*.pkl` store precomputed features/embeddings.
-- `logs/`, `vae_leiden_csv*/`, and `results_para_search.csv` capture experiment outputs and parameter sweeps.
+## Data & Supporting Assets
+- `chrometric_feature_description.csv` documents every NMCO descriptor.
+- Multiple `nmco_features_df*.csv` and `latent_list*.pkl` snapshots capture preprocessing runs (balanced, patient-filtered, independent cohort) so notebook experiments can be reproduced quickly.
+- `example_data/` plus the filtered CSVs provide minimal inputs for verifying the segmentation + feature pipeline before scaling to full cohorts.
 
-## Citation 
+## Repro Notes
+1. Install dependencies (`pip install -r requirements.txt`) and ensure the repo root is on `PYTHONPATH` so `nmco` imports succeed.
+2. Run `nuclear_segmentation.ipynb` to refresh label volumes, execute `Train_VAE_get_Embedding.ipynb` when you need updated embeddings, then launch the analysis notebooks corresponding to handcrafted vs. VAE experiments.
+3. Typical order: segmentation → feature extraction / VAE training → hand-crafted analysis (full + independent) → VAE embedding analysis; rerun whichever stage aligns with your experiment.
+
