@@ -23,12 +23,12 @@ Install everything with `pip install -r requirements.txt`:
 - Produces segmentation masks (`bw_dapi*.tiff`) that drive all downstream notebooks and CLI tools.
 
 ### `Train_VAE_get_Embedding.ipynb`
-- Loads the curated NMCO feature table (`nmco_features_filtered_with_qc_3rd_july_2024.csv`), converts nuclei into uniform 128×128 maximum-projection patches grouped by pathology, and builds PyTorch datasets with balanced pathology/patient splits (`Train_VAE_get_Embedding.ipynb:2`).
+- Loads the curated NMCO feature table (`nmco_features_filtered_with_qc.csv`), converts nuclei into uniform 128×128 maximum-projection patches grouped by pathology, and builds PyTorch datasets with balanced pathology/patient splits (`Train_VAE_get_Embedding.ipynb:2`).
 - Defines and trains a convolutional VAE (MSE reconstruction loss, configurable epochs/checkpoints) while logging training curves and saving state dict snapshots for later reuse (`Train_VAE_get_Embedding.ipynb:6`).
 - Runs inference to capture latent vectors, reconstructions, and metadata for both train and held-out partitions; exports them as `latent_list*.pkl`, `recon_list*.pkl`, `pathalogy*.pkl`, and `patient_id*.pkl` so analysis notebooks can consume a consistent embedding space (`Train_VAE_get_Embedding.ipynb:1101`).
 
 ### `Embedding_analysis_on_hand_crafted_features_full.ipynb`
-- Loads the NMCO feature matrix (`nmco_features_filtered_jumbled_26th_aug.csv`), removes unstable descriptors, scales numeric columns, and visualizes correlations/Wasserstein distances to understand redundancy (`Embedding_analysis_on_hand_crafted_features_full.ipynb:1`).
+- Loads the NMCO feature matrix (`nmco_features_filtered_jumbled.csv`), removes unstable descriptors, scales numeric columns, and visualizes correlations/Wasserstein distances to understand redundancy (`Embedding_analysis_on_hand_crafted_features_full.ipynb:1`).
 - Balances nuclei per patient/disease, runs Leiden clustering on the feature manifold, and maps clusters to interpretable chromatin states while keeping consensus with VAE labels.
 - Builds patient-by-cluster enrichment tables, plots disease-specific cluster usage, and uses igraph to visualize patient similarity graphs.
 - Trains Random Forest classifiers with permutation tests to benchmark pathology prediction, reports feature importances, and uses ANOVA/statannotations to tie cluster frequencies back to clinical covariates (`cohort_details.csv`).
