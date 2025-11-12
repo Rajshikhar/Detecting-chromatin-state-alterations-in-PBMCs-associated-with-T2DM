@@ -5,11 +5,6 @@ This repository contains the codes and notebooks necessary to reproduce results 
 
 <img width="960" height="540" alt="github_t2dm_coverpage" src="https://github.com/user-attachments/assets/daaaaf18-eec3-4e5d-90e3-bf38cec9268f" />
 
-
-1. "Embedding_analysis_on_hand_crafted_features_full.ipynb" contains the code used for the analysis on Handcrafted features. 
-2. "Embedding_analysis_on_hand_crafted_features_Independent_Dataset.ipynb" contains the code used for the analysis on the independent split. 
-3. "Embedding_analysis_on_VAE_features_full.ipynb" contains the code used for the analysis on VAE features. 
-
 ## Project Overview
 Chrometrics packages the tooling we use to characterize chromatin organization (NMCO) from fluorescent PBMC images collected under compressed vs. control conditions. The repository couples a reusable nuclear segmentation workflow with feature extraction utilities (`nmco/`) and analysis notebooks that compare handcrafted NMCO descriptors with latent representations learned by VAEs.
 
@@ -45,8 +40,9 @@ Python 3.9+, `numpy`, `scipy`, `scikit-image`, `tifffile`, `pandas`, `matplotlib
 
 ## Downstream Analysis
 - Use `measure_nmco_features.py` or `nmco.utils.run_nuclear_feature_extraction` to build feature tables per nucleus.
-- Handcrafted feature notebooks analyze class balance, patient-level stability, and classifier performance across treatments.
+- Handcrafted feature notebooks ("Embedding_analysis_on_hand_crafted_features_full.ipynb") analyze class balance, patient-level stability, and classifier performance across treatments.
 - VAE notebooks (`Embedding_analysis_on_VAE_features_*.ipynb`) compare latent spaces, assess cluster reproducibility, and fuse embeddings with clinical metadata from `cohort_details.csv`.
+- Independent Dataset notebooks ( "Embedding_analysis_on_hand_crafted_features_Independent_Dataset.ipynb") analyse the generalizability of our framework within our dataset.
 
 ## Data & Metadata
 - `chrometric_feature_description.csv` documents every NMCO metric.
